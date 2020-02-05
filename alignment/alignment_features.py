@@ -38,5 +38,5 @@ def mfcc(fn_or_signal, num_bands=120, skip=20):
     mfcc_norm = mfcc.T  / np.linalg.norm(mfcc, axis=1)
     # mfcc_norm = mfcc_norm.T
 
-    return mfcc_norm
+    return mfcc_norm, fs_mfcc
 
