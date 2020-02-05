@@ -1,0 +1,31 @@
+name: bruckner
+
+channels:
+  - defaults
+  - speleo3
+  - conda-forge
+
+dependencies:
+  - python=3.7
+  - numpy
+  - scipy
+  - cython
+  - matplotlib
+  - ipython
+  - jupyter
+  - pandas
+  - sympy
+  - nose
+  - autopep8
+  - virtualenv
+  - scikit-learn
+  - sphinx
+
+  - pip:
+    - madmom
+    - jedi
+    - lxml
+    - ply
+    - roman
+    - git+https://github.com/OFAI/partitura.git
+    - librosa
