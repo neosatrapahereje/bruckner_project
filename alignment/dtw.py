@@ -1,76 +1,52 @@
 import numpy as np
-import matplotlib
-matplotlib.use('agg')
-from alignment_features import mfcc
 from librosa.sequence import dtw
-import matplotlib.pyplot as plt
+from distances import euclidean
+import logging
 
-import os
-import glob
+LOGGER = logging.getLogger(__name__)
 
-import madmom
+DEFAULT_DTW_KWARGS = dict(
+    # steps for DTW
+    step_sizes_sigma=np.array([[1, 1], [0, 1], [1, 0]], dtype=np.int),
+    # Additive weights
+    weights_add=np.zeros(3, dtype=np.float32),
+    # Multiplicative weights
+    weights_mul = np.array([2, 1, 1], dtype=np.float32),
+)
 
-import time
+def dtw_alignment(perf_features, ref_features,
+                  metric='euclidean',
+                  dtw_kwargs=DEFAULT_DTW_KWARGS):
+    """
+    Compute an alignment using Dynamic Time Warping
 
-def _perf_name(fn):
-    return os.path.basename(fn).replace(' ', '_').replace('.flac', '')
+    Parameters
+    ----------
+    perf_features : np.ndarray
+        The feature representation of the performance. A 2D array of shape (num_frames_perf, num_features).
+    ref_features : np.ndarray
+        The feature representation of the reference performance. A 2D array of shape (num_frames_ref, num_features)
+    metric : str
+        Metric to compute the pairwise cost. Default is 'euclidean'.
+    dtw_kwargs : dict
+        Dictionary of arguments to be passed to `dtw`.
 
-if  __name__ == '__main__':
-    data_dir = r'../data/'
-
-    audio_files = glob.glob(os.path.join(data_dir, '*', '*.flac'))
-
-    fn = audio_files[0]
-
-    reference_fn = audio_files[1]
-
-    sample_rate = int(44100 / 4)
+    Returns
+    wp : np.ndarray
+       Warping path. An array of size (num_frames_perf, 2) with the indices of the corresponding frame
+       in perf_features and ref_features (i.e., which index of perf_features corresponds to which index
+       of ref_features).
+    D : np.ndarray
+       Accumulated cost matrix
+    """
     
-    start = time.time()
-    print('Loading performance')
-    performance = madmom.audio.signal.Signal(fn, sample_rate=sample_rate,
-                                             num_channels=1)[:sample_rate * 60 * 2]
+    if metric == 'euclidean':
+        pairwise_local_cost = euclidean
 
-    print('Loading reference')
-    reference = madmom.audio.signal.Signal(reference_fn, sample_rate=sample_rate,
-                                           num_channels=1)[:sample_rate * 60 * 2]
+    LOGGER.info('Computing pairwise distance')
+    C = pairwise_local_cost(perf_features, ref_features)
 
-    print('extracting audio features from performance')
-    perf_mfcc, perf_framed = mfcc(performance)
+    LOGGER.info('Computing DTW path')
+    D, wp = dtw(C=C, **dtw_kwargs)
 
-    print('extracting audio features from reference')
-    ref_mfcc, ref_framed = mfcc(reference)
-
-    perf_times = np.arange(perf_framed.num_frames) / perf_framed.fps
-    ref_times = np.arange(ref_framed.num_frames) / ref_framed.fps
-
-    fig, axes = plt.subplots(2)
-    axes[0].imshow(perf_mfcc, aspect='auto',
-               interpolation='nearest',
-               origin='lowest')
-    axes[1].imshow(ref_mfcc, aspect='auto',
-               interpolation='nearest',
-               origin='lowest')
-    plt.savefig('features.pdf')
-    # plt.show()
-    plt.clf()
-    plt.close()
-
-    print('Estimating algnment')
-    D, wp = dtw(perf_mfcc, ref_mfcc)
-    wp = wp[::-1]
-    plt.plot(perf_times[wp[:, 0]], ref_times[wp[:, 1]])
-    plt.xlabel('Performance time (s)')
-    plt.ylabel('Reference time (s)')
-    plt.savefig('alignment.pdf')
-    plt.clf()
-    plt.close()
-
-    end = time.time()
-
-    print('alignment duration {0}'.format(end -start))
-
-    alignment = np.column_stack((perf_times[wp[:, 0]], ref_times[wp[:, 1]]))
-    out_fn = 'alignment_p_{0}_r_{1}.txt'.format(_perf_name(fn), _perf_name(reference_fn))
-    np.savetxt(out_fn, alignment, delimiter='\t')
-
+    return wp[::-1], D
