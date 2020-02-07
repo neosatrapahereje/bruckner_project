@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 from librosa.sequence import dtw
 from distances import euclidean
@@ -11,7 +12,7 @@ DEFAULT_DTW_KWARGS = dict(
     # Additive weights
     weights_add=np.zeros(3, dtype=np.float32),
     # Multiplicative weights
-    weights_mul = np.array([2, 1, 1], dtype=np.float32),
+    weights_mul=np.array([2, 1, 1], dtype=np.float32),
 )
 
 def dtw_alignment(perf_features, ref_features,
