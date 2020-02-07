@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import glob
+import json
 import logging
 import time
 import os
@@ -11,8 +12,12 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
+from alignment.features import (extract_features,
+                                DEFAULT_FEATURE_KWARGS,
+                                SAMPLE_RATE,
+                                FRAME_SIZE,
+                                HOP_SIZE)
 from alignment.dtw import dtw_alignment, DEFAULT_DTW_KWARGS
-from alignment.features import extract_features
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
@@ -23,15 +28,46 @@ def _perf_name(fn):
     return os.path.basename(fn).replace(' ', '_').replace('.flac', '')
 
 def main(performance_fn, reference_fn, out_dir,
+         sample_rate=SAMPLE_RATE,
+         frame_size=FRAME_SIZE,
+         hop_size=HOP_SIZE,
          make_plots=True,
+         feature_kwargs=DEFAULT_FEATURE_KWARGS,
          dtw_kwargs=DEFAULT_DTW_KWARGS):
     """
     Perform an alignment
+
+    Parameters
+    ----------
+    performance_fn : str
+        Audio file with the performance
+    reference_fn : str
+        Audio file with the reference performance.
+    out_dir : str
+        Directory to store alignment results
+    sample_rate : int
+    frame_size : int
+    hop_size : int
+    make_plots : bool
+    feature_kwargs : dict
+    dtw_kwargs : dict
     """
-    LOGGER.info('Exctracting features from performance')
-    perf_features, perf_times = extract_features(performance_fn, features='mfcc')
-    LOGGER.info('Extracting features from reference')
-    ref_features, ref_times = extract_features(reference_fn, features='mfcc')
+    ###### Feature extraction ######
+    features = feature_kwargs.pop('features')
+    LOGGER.info('Exctracting {0} features from performance'.format(features))
+    perf_features, perf_times = extract_features(performance_fn,
+                                                 features=features,
+                                                 feature_kwargs=feature_kwargs,
+                                                 sample_rate=sample_rate,
+                                                 frame_size=frame_size,
+                                                 hop_size=hop_size)
+    LOGGER.info('Extracting {0} features from reference'.format(features))
+    ref_features, ref_times = extract_features(reference_fn,
+                                               features=features,
+                                               feature_kwargs=feature_kwargs,
+                                               sample_rate=sample_rate,
+                                               frame_size=frame_size,
+                                               hop_size=hop_size)
 
     if make_plots:
         LOGGER.info('Plotting features')
@@ -45,7 +81,6 @@ def main(performance_fn, reference_fn, out_dir,
         axes[0].imshow(perf_features.T, aspect='auto',
                        interpolation='nearest',
                        origin='lowest')
-        # axes[0].set_xlabel('Time (minutes)')
         axes[0].set_title(_perf_name(performance_fn))
         axes[0].set_ylabel('Features')
         axes[0].set_xticks(pxticks)
@@ -60,7 +95,6 @@ def main(performance_fn, reference_fn, out_dir,
         axes[1].set_title(_perf_name(reference_fn))
         plt.tight_layout()
 
-        
         fig_fn = os.path.join(out_dir,
                               'features_p_{0}_r_{1}.pdf'.format(_perf_name(performance_fn),
                                                                 _perf_name(reference_fn)))
@@ -68,6 +102,7 @@ def main(performance_fn, reference_fn, out_dir,
         plt.clf()
         plt.close()
 
+    ###### Compute alignment ######
     LOGGER.info('Computing Alignment')
     # Compute pairwise cost
     wp, D = dtw_alignment(perf_features=perf_features,
@@ -102,25 +137,50 @@ def main(performance_fn, reference_fn, out_dir,
 
 if __name__ == '__main__':
 
-    
     parser = argparse.ArgumentParser('Align a piece')
 
     parser.add_argument('performance_fn', help='Audio file with the piece to be aligned')
     parser.add_argument('reference_fn', help='Audio file with the reference performance')
     parser.add_argument('out_dir', help='Directory for storing the outputs',
                         default='.')
+    parser.add_argument('--sr', help='Sample rate (default {0}Hz)'.format(SAMPLE_RATE),
+                        type=int, default=SAMPLE_RATE)
+    parser.add_argument('--fs', help='Frame size (Default {0})'.format(FRAME_SIZE),
+                        type=int, default=FRAME_SIZE)
+    parser.add_argument('--hs', help='Hop size (Default {0})'.format(HOP_SIZE),
+                        type=int, default=HOP_SIZE)
+    parser.add_argument('--features-config',
+                        help='Config file for computing audio features (JSON format)',
+                        default=None)
     parser.add_argument('--no-plots', help='Do not generate plots',
                         action='store_true', default=False)
+    parser.add_argument('--dtw-config', help='Config file for DTW (JSON format)',
+                        default=None)
 
     args = parser.parse_args()
 
     if not os.path.exists(args.out_dir):
         os.mkdir(args.out_dir)
 
+    if args.features_config is not None:
+        feature_kwargs = json.load(open(args.features_config))
+    else:
+        feature_kwargs = DEFAULT_FEATURE_KWARGS
+
+    if args.dtw_config is not None:
+        dtw_kwargs = json.load(open(args.dtw_config))
+    else:
+        dtw_kwargs = DEFAULT_DTW_KWARGS
+
     main(performance_fn=args.performance_fn,
          reference_fn=args.reference_fn,
          out_dir=args.out_dir,
-         make_plots=not args.no_plots)
+         make_plots=not args.no_plots,
+         sample_rate=args.sr,
+         frame_size=args.fs,
+         hop_size=args.hs,
+         feature_kwargs=feature_kwargs,
+         dtw_kwargs=dtw_kwargs)
     
 
     

@@ -10,19 +10,26 @@ LOGGER = logging.getLogger(__name__)
 
 # Sample rate in Hz
 SAMPLE_RATE = 44100
-FRAME_SIZE = 0.02
-HOP_SIZE = 0.01
+FRAME_SIZE = 0.1
+HOP_SIZE = 0.05
+DEFAULT_FEATURE_KWARGS = dict(
+    features='mfcc',
+    num_bands=120,
+    skip=20)
 
 
-def extract_features(fn, features='mfcc', sample_rate=SAMPLE_RATE,
-                     frame_size=FRAME_SIZE, hop_size=HOP_SIZE, **kwargs):
+def extract_features(fn, features='mfcc',
+                     feature_kwargs=DEFAULT_FEATURE_KWARGS,
+                     sample_rate=SAMPLE_RATE,
+                     frame_size=FRAME_SIZE,
+                     hop_size=HOP_SIZE):
 
     signal = load_audio(fn, sample_rate=sample_rate)
 
     framed_signal = frame_signal(signal, frame_size=frame_size,
                                  hop_size=hop_size)
 
-    return compute_features(framed_signal, features=features, **kwargs)
+    return compute_features(framed_signal, features=features, **feature_kwargs)
     
 
 def load_audio(fn_or_signal, sample_rate=SAMPLE_RATE):
