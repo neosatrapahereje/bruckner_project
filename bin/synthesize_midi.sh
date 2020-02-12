@@ -13,6 +13,10 @@ out_file=$2
 
 # Soundfont
 soundfont="${red}/score/FluidR3_GM.sf2"
+if [ ! -f "${soundfont}" ]; then
+    echo "Soundfont not found!"
+    
+fi
 
 piece_name=$(basename "${midi_fn}" .mid)
 wav_fn="${out_file}".wav
