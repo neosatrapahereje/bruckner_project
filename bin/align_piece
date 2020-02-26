@@ -119,10 +119,15 @@ def main(performance_fn, reference_fn, out_dir,
 
     if make_plots:
         LOGGER.info('Plotting alignment')
-        plt.matshow(D, aspect='auto',
-                    interpolation='nearest',
-                   cmap='gray',
-                   origin='lowest')
+        
+        try:
+            # if Distance is not matrix
+            plt.matshow(D, aspect='auto',
+                        interpolation='nearest',
+                       cmap='gray',
+                       origin='lowest')
+        except:
+            pass
 
         plt.plot(wp[:, 1],  wp[:, 0], label='Optimal path', color='y')
 
