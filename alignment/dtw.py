@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from librosa.sequence import dtw
+from fastdtw import fastdtw
 from distances import euclidean
 import logging
 
@@ -41,13 +42,15 @@ def dtw_alignment(perf_features, ref_features,
        Accumulated cost matrix
     """
     
-    if metric == 'euclidean':
-        pairwise_local_cost = euclidean
+    # if metric == 'euclidean':
+    #     pairwise_local_cost = euclidean
 
-    LOGGER.info('Computing pairwise distance')
-    C = pairwise_local_cost(perf_features, ref_features)
+    # LOGGER.info('Computing pairwise distance')
+    # C = pairwise_local_cost(perf_features, ref_features)
 
-    LOGGER.info('Computing DTW path')
-    D, wp = dtw(C=C, **dtw_kwargs)
-
-    return wp[::-1], D
+    # LOGGER.info('Computing DTW path')
+    # D, wp = dtw(C=C, **dtw_kwargs)
+    D, wp = fastdtw(perf_features, ref_features)
+    return np.array(wp, dtype=int), D
+    # return wp[::-1], D
+    

@@ -5,6 +5,9 @@ import madmom
 import numpy as np
 import librosa
 
+from madmom.audio import cepstrogram
+from madmom.audio.filters import MelFilterbank
+
 from scipy.fftpack import dct
 
 LOGGER = logging.getLogger(__name__)
@@ -14,9 +17,10 @@ SAMPLE_RATE = 44100
 FRAME_SIZE = 0.1
 HOP_SIZE = 0.05
 DEFAULT_FEATURE_KWARGS = dict(
-    features='mfcc',
+    features='mfcc_madmom',
     num_bands=120,
-    skip=20)
+    skip=20
+)
 
 
 def extract_features(fn, features='mfcc',
@@ -101,8 +105,13 @@ def compute_features(framed_signal, features='mfcc', *args, **kwargs):
         An array with the times in seconds corresponding to each frame
     """
     frame_times = np.arange(framed_signal.num_frames) / framed_signal.fps
-    if features == 'mfcc':
-        return mfcc(framed_signal, *args, **kwargs), frame_times
+
+    feature_func = globals()[features]
+    return feature_func(framed_signal, *args, **kwargs), frame_times
+    # if features == 'mfcc':
+    #     return mfcc(framed_signal, *args, **kwargs), frame_times
+    # elif features == 'clp_chroma':
+    #     return clp_chroma(framed_signal, *args, **kwargs), frame_times
 
 
 def mfcc(framed_signal, num_bands=120, skip=20):
@@ -155,3 +164,61 @@ def mfcc(framed_signal, num_bands=120, skip=20):
 
     return mfcc.astype(np.float32)
 
+
+def pc_chroma(framed_signal, *args, **kwargs):
+
+    frame_size = framed_signal.frame_size
+    hop_size = framed_signal.hop_size
+    sample_rate = framed_signal.signal.sample_rate
+
+    zeroPad = 2**0
+    fft_size = int(pow(2, np.round(np.log(frame_size * zeroPad)/np.log(2))))
+    window = np.hamming(framed_signal.frame_size + 1)[:-1]
+    spectrogram = madmom.audio.spectrogram.Spectrogram(framed_signal,
+                                                     fft_size=fft_size,
+                                                     window=window)
+
+    chroma = madmom.audio.chroma.PitchClassProfile(spectrogram)
+
+    return chroma.astype(np.float32)
+
+
+def harmonic_chroma(framed_signal, *args, **kwargs):
+
+    frame_size = framed_signal.frame_size
+    hop_size = framed_signal.hop_size
+    sample_rate = framed_signal.signal.sample_rate
+
+    zeroPad = 2**0
+    fft_size = int(pow(2, np.round(np.log(frame_size * zeroPad)/np.log(2))))
+    window = np.hamming(framed_signal.frame_size + 1)[:-1]
+    spectrogram = madmom.audio.spectrogram.Spectrogram(framed_signal,
+                                                     fft_size=fft_size,
+                                                     window=window)
+
+    chroma = madmom.audio.chroma.HarmonicPitchClassProfile(spectrogram)
+
+    return chroma.astype(np.float32)
+
+
+
+def mfcc_madmom(framed_signal, num_bands=120, skip=20,
+                *args, **kwargs):
+
+    frame_size = framed_signal.frame_size
+    hop_size = framed_signal.hop_size
+    sample_rate = framed_signal.signal.sample_rate
+
+    zeroPad = 2**0
+    fft_size = int(pow(2, np.round(np.log(frame_size * zeroPad)/np.log(2))))
+    window = np.hamming(framed_signal.frame_size + 1)[:-1]
+
+    spectrogram = madmom.audio.spectrogram.FilteredSpectrogram(framed_signal,
+                                                               filterbank=MelFilterbank,
+                                                     fft_size=fft_size,
+                                                     window=window)
+ 
+
+    mfcc = cepstrogram.MFCC(spectrogram, num_bands=num_bands)
+
+    return mfcc[:, skip:].astype(np.float32)
