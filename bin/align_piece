@@ -96,7 +96,8 @@ def main(performance_fn, reference_fn, out_dir,
 
         axes[0].imshow(perf_features.T, aspect='auto',
                        interpolation='nearest',
-                       origin='lowest')
+                       origin='lowest',
+                       cmap='BuPu')
         axes[0].set_title(_perf_name(performance_fn))
         axes[0].set_ylabel('Features')
         axes[0].set_xticks(pxticks)

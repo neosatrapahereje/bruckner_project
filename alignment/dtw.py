@@ -42,6 +42,13 @@ def dtw_alignment(perf_features, ref_features,
     D : np.ndarray
        Accumulated cost matrix
     """
+
+    if 'metric' in dtw_kwargs:
+        # Use metric from config
+        metric = dtw_kwargs.pop('metric')
+
+    LOGGER.info('Using {0} metric'.format(metric))
+        
     if backend == 'librosa':
         if metric == 'euclidean':
             pairwise_local_cost = euclidean_cdist
