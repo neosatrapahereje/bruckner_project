@@ -25,13 +25,6 @@ def get_unique_timepoints(x, y, agg=np.mean):
     return ux, uy
 
 
-    
-
-    
-    
-    
-
-
 if __name__ == '__main__':
 
     ref_alignment = '../pairwise_alignments/alignment_p_Bruckner_7_Adagio.mp3_r_Karajan_-_1989__(Adagio).txt'
@@ -40,25 +33,43 @@ if __name__ == '__main__':
     score_alignment = np.loadtxt(score_alignment_fn, delimiter='\t')
     ref_alignment = np.loadtxt(ref_alignment, delimiter='\t')
 
-    rs_st, rs_pt = get_unique_timepoints(ref_alignment[:, 0], ref_alignment[:, 1])
+    interp_fun = interp1d(score_alignment[:, 0],
+                          score_alignment[:, 1],
+                          kind='linear')
 
-    pr_st, pr_pt = get_unique_timepoints(score_alignment[:, 0], score_alignment[:, 1])
 
-    ref_score_fun = interp1d(rs_st, rs_pt,
-                       kind='linear',
-                       bounds_error=False,
-                       fill_value=(score_alignment[:, 1].min(), score_alignment[:, 1].max()))
-    perf_score_fun = interp1d(pr_st, ref_score_fun(pr_pt),
-                              kind='linear',
-                              bounds_error=False,
-                              fill_value=(score_alignment[:, 1].min(), score_alignment[:, 1].max()))
+    unique_perf_times = np.linspace(score_alignment[:, 0].min(),
+                                    score_alignment[:, 0].max())
 
-    
+    score_times = interp_fun(unique_perf_times)
 
-    
-    plt.plot(rs_st, rs_pt)
-    plt.plot(perf_score_fun(pr_st), pr_st)
+    plt.plot(unique_perf_times, score_times)
     plt.show()
+
+    # smooth = lowess(score_alignment[:, 1],
+    #                 score_alignment[:, 0],
+    #                 is_sorted=True,
+    #                 frac=0.020, it=3)
+
+    # rs_st, rs_pt = get_unique_timepoints(ref_alignment[:, 0], ref_alignment[:, 1])
+
+    # pr_st, pr_pt = get_unique_timepoints(score_alignment[:, 0], score_alignment[:, 1])
+
+    # ref_score_fun = interp1d(rs_st, rs_pt,
+    #                    kind='linear',
+    #                    bounds_error=False,
+    #                    fill_value=(score_alignment[:, 1].min(), score_alignment[:, 1].max()))
+    # perf_score_fun = interp1d(pr_st, ref_score_fun(pr_pt),
+    #                           kind='linear',
+    #                           bounds_error=False,
+    #                           fill_value=(score_alignment[:, 1].min(), score_alignment[:, 1].max()))
+
+    
+
+    
+    # plt.plot(rs_st, rs_pt)
+    # plt.plot(perf_score_fun(pr_st), pr_st)
+    # plt.show()
 
     # score_times = np.unique(ref_alignment[:, 1])
     # unique_score_idxs = [np.where(ref_alignment[:, 1] == u)[0] for u in score_times]

@@ -6,7 +6,8 @@ import numpy as np
 import librosa
 
 from madmom.audio import cepstrogram
-from madmom.audio.filters import MelFilterbank
+from madmom.audio.filters import MelFilterbank, LogFilterbank
+from madmom.audio import spectrogram
 
 from scipy.fftpack import dct
 
@@ -17,7 +18,7 @@ SAMPLE_RATE = 44100
 FRAME_SIZE = 0.1
 HOP_SIZE = 0.05
 DEFAULT_FEATURE_KWARGS = dict(
-    features='mfcc_madmom',
+    features='mfcc',
     num_bands=120,
     skip=20
 )
@@ -108,10 +109,6 @@ def compute_features(framed_signal, features='mfcc', *args, **kwargs):
 
     feature_func = globals()[features]
     return feature_func(framed_signal, *args, **kwargs), frame_times
-    # if features == 'mfcc':
-    #     return mfcc(framed_signal, *args, **kwargs), frame_times
-    # elif features == 'clp_chroma':
-    #     return clp_chroma(framed_signal, *args, **kwargs), frame_times
 
 
 def mfcc(framed_signal, num_bands=120, skip=20):
@@ -137,9 +134,10 @@ def mfcc(framed_signal, num_bands=120, skip=20):
     sample_rate = framed_signal.signal.sample_rate
 
     zeroPad = 2**0
-    fft_size_mfcc = int(pow(2, np.round(np.log(frame_size * zeroPad)/np.log(2))))
+    fft_size_mfcc = int(pow(2, np.round(np.log2(frame_size * zeroPad))))
+                            # np.round(np.log(frame_size * zeroPad)/np.log(2))))
     window_mfcc = np.hamming(framed_signal.frame_size + 1)[:-1]
-    spec_mfcc = madmom.audio.spectrogram.Spectrogram(framed_signal,
+    spec_mfcc = spectrogram.Spectrogram(framed_signal,
                                                      fft_size=fft_size_mfcc,
                                                      window=window_mfcc)
     for i in range(spec_mfcc.shape[0]):
@@ -167,24 +165,19 @@ def mfcc(framed_signal, num_bands=120, skip=20):
 
 def pc_chroma(framed_signal, *args, **kwargs):
 
-    frame_size = framed_signal.frame_size
-    hop_size = framed_signal.hop_size
-    sample_rate = framed_signal.signal.sample_rate
-
-    zeroPad = 2**0
-    fft_size = int(pow(2, np.round(np.log(frame_size * zeroPad)/np.log(2))))
-    window = np.hamming(framed_signal.frame_size + 1)[:-1]
-    spectrogram = madmom.audio.spectrogram.Spectrogram(framed_signal,
-                                                     fft_size=fft_size,
-                                                     window=window)
-
-    chroma = madmom.audio.chroma.PitchClassProfile(spectrogram)
-
+    spec = lin_spectrogram(framed_signal)
+    chroma = madmom.audio.chroma.PitchClassProfile(spec)
     return chroma.astype(np.float32)
 
 
 def harmonic_chroma(framed_signal, *args, **kwargs):
 
+    spec = lin_spectrogram(framed_signal)
+    chroma = madmom.audio.chroma.HarmonicPitchClassProfile(spec)
+    return chroma.astype(np.float32)
+
+
+def lin_spectrogram(framed_signal, *args, **kwargs):
     frame_size = framed_signal.frame_size
     hop_size = framed_signal.hop_size
     sample_rate = framed_signal.signal.sample_rate
@@ -192,33 +185,33 @@ def harmonic_chroma(framed_signal, *args, **kwargs):
     zeroPad = 2**0
     fft_size = int(pow(2, np.round(np.log(frame_size * zeroPad)/np.log(2))))
     window = np.hamming(framed_signal.frame_size + 1)[:-1]
-    spectrogram = madmom.audio.spectrogram.Spectrogram(framed_signal,
-                                                     fft_size=fft_size,
-                                                     window=window)
+    spect = spectrogram.Spectrogram(framed_signal,
+                                    fft_size=fft_size,
+                                    window=window)
+    return spect
 
-    chroma = madmom.audio.chroma.HarmonicPitchClassProfile(spectrogram)
 
-    return chroma.astype(np.float32)
+def log_spectrogram(framed_signal,
+                    *args, **kwargs):
+    spect = lin_spectrogram(framed_signal)
+    log_spectrogram = spectrogram.LogarithmicFilteredSpectrogram(spect,
+                                                                 filterbank=LogFilterbank)
+    return log_spectrogram
+
+
+def mel_spectrogram(framed_signal,
+                    *args, **kwargs):
+    spect = lin_spectrogram(framed_signal)
+    mel_spectrogram = spectrogram.LogarithmicFilteredSpectrogram(spect,
+                                                                 filterbank=MelFilterbank)
+    return mel_spectrogram
+    
 
 
 
 def mfcc_madmom(framed_signal, num_bands=120, skip=20,
                 *args, **kwargs):
-
-    frame_size = framed_signal.frame_size
-    hop_size = framed_signal.hop_size
-    sample_rate = framed_signal.signal.sample_rate
-
-    zeroPad = 2**0
-    fft_size = int(pow(2, np.round(np.log(frame_size * zeroPad)/np.log(2))))
-    window = np.hamming(framed_signal.frame_size + 1)[:-1]
-
-    spectrogram = madmom.audio.spectrogram.FilteredSpectrogram(framed_signal,
-                                                               filterbank=MelFilterbank,
-                                                     fft_size=fft_size,
-                                                     window=window)
- 
-
-    mfcc = cepstrogram.MFCC(spectrogram, num_bands=num_bands)
+    spect = lin_spectrogram(framed_signal)
+    mfcc = cepstrogram.MFCC(spect, num_bands=num_bands)
 
     return mfcc[:, skip:].astype(np.float32)

@@ -29,3 +29,4 @@ dependencies:
     - roman
     - git+https://github.com/OFAI/partitura.git
     - librosa
+    - fastdtw
