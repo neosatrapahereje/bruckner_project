@@ -104,7 +104,8 @@ def main(performance_fn, reference_fn, out_dir,
         axes[0].set_xticklabels(pxtick_labels)
         axes[1].imshow(ref_features.T, aspect='auto',
                        interpolation='nearest',
-                       origin='lowest')
+                       origin='lowest',
+                       cmap='BuPu')
         axes[1].set_xlabel('Time (minutes)')
         axes[1].set_ylabel('Features')
         axes[1].set_xticks(rxticks)
@@ -124,7 +125,6 @@ def main(performance_fn, reference_fn, out_dir,
     # Compute pairwise cost
     wp, D = dtw_alignment(perf_features=perf_features,
                           ref_features=ref_features,
-                          metric='euclidean',
                           dtw_kwargs=dtw_kwargs)
     out_fn = os.path.join(out_dir,
                           'alignment_p_{0}_r_{1}.txt'.format(_perf_name(performance_fn),
@@ -132,7 +132,9 @@ def main(performance_fn, reference_fn, out_dir,
     if beat_map is None:
         alignment = np.column_stack((perf_times[wp[:, 0]], ref_times[wp[:, 1]]))
     else:
-        alignment = np.column_stack((perf_times[wp[:, 0]], ref_times[wp[:, 1]], beat_map(ref_times[wp[:, 1]])))
+        alignment = np.column_stack((perf_times[wp[:, 0]],
+                                     ref_times[wp[:, 1]],
+                                     beat_map(ref_times[wp[:, 1]])))
         est_beat_times = get_beat_times(alignment=alignment,
                                         s_beats=score_beats)
         np.savetxt(out_fn.replace('.txt', '_beat_times.txt'), est_beat_times)

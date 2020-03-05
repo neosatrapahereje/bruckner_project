@@ -69,7 +69,8 @@ def dtw_alignment(perf_features, ref_features,
             local_cost = cosine
         elif metric == 'l1':
             local_cost = l1
-        D, wp = fastdtw(perf_features.astype(np.float32), ref_features.astype(np.float32),
+        D, wp = fastdtw(perf_features,
+                        ref_features,
                         dist=local_cost)
         return np.array(wp, dtype=int), D
 
