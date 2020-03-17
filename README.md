@@ -10,7 +10,8 @@ conda env create -f environment.yml
 ```
 
 2. Compile Cython code
-```
+
+```bash
 # Activate python environment
 conda activate bruckner
 # Compile cython code
@@ -21,4 +22,16 @@ python setup.py build_ext --inplace
 
 ## Running alignments
 
-TBD
+To align a single performance
+
+```bash
+#Activate python environment
+conda activate bruckner
+#run code
+./bin/align_piece path/to/performance_to_align.flac path/to/reference_performance.flac output_dir
+```
+
+For more information
+```
+./bin/align_piece -h
+```

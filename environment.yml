@@ -27,6 +27,6 @@ dependencies:
     - lxml
     - ply
     - roman
-    - git+https://github.com/OFAI/partitura.git
+    - git+https://github.com/OFAI/partitura.git@develop
     - librosa
     - fastdtw
